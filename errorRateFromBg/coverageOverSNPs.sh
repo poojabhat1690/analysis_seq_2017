@@ -31,7 +31,7 @@ mkdir -p "$OUTDIR"/finalMP/
 
 cd /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11/filter/
 
-for i in *.bam
+for i in combined*.bam
 	        
 do     
 
@@ -50,7 +50,7 @@ do
 		 MAXCOL=`awk '{if (NF > max) {max = NF; line=$0}} END{print line}' "$OUTDIR"/"$i"_MPtags_split.txt  | awk '{print NF}'` 
 
 
-		 for ((j=1;j<="$MAXCOL";j+=1))
+		for ((j=1;j<="$MAXCOL";j+=1))
 
 		 do
 
@@ -64,18 +64,24 @@ do
 
 #			paste "$OUTDIR"/"$i"_relavantCols.txt "$OUTDIR"/"$i"_MPtags_split_"$j".txt | awk '{ print $2+$4; }' - | paste "$OUTDIR"/"$i"_relavantCols.txt - | awk '$2!=$4' - | awk '{print $1, $4}' > "$OUTDIR"/finalMP/SNP_"$i"_"$j".txt
 
-paste "$OUTDIR"/"$i"_relavantCols.txt "$OUTDIR"/"$i"_MPtags_split_"$j".txt | awk '{ print $2+$4; }' - | paste "$OUTDIR"/"$i"_relavantCols.txt - | awk '$2!=$4' - | awk '{print $1, $4}' - | paste  "$OUTDIR"/"$i"_identityOfSNP_split_"$j".txt -  > "$OUTDIR"/finalMP/SNPidentity_"$i"_"$j".txt
+	paste "$OUTDIR"/"$i"_relavantCols.txt "$OUTDIR"/"$i"_MPtags_split_"$j".txt | awk '{ print $2+$4; }' - | paste "$OUTDIR"/"$i"_relavantCols.txt - | awk '$2!=$4' - | awk '{print $1, $4}' - | paste  - "$OUTDIR"/"$i"_identityOfSNP_split_"$j".txt | awk -v OFS='\t' '{print $1, $2, $3}' - | awk '$3!=""' -  > "$OUTDIR"/finalMP/SNPidentity_"$i"_"$j".txt
 
 		done
 
 	
-	cat "$OUTDIR"/finalMP/SNPidentity_"$i"_* | awk -F"\t" '!seen[$1, $2]++'  > "$OUTDIR"/finalMP/"$i"_SNPIdentity_unique.txt
+
 
 #	cat "$OUTDIR"/finalMP/SNP_"$i"_* | awk -F"\t" '!seen[$1, $2]++' - > "$OUTDIR"/finalMP/"$i"_allSNPs_unique.txt
 
 #	awk '{$3=$2+1}1' "$OUTDIR"/finalMP/"$i"_allSNPs_unique.txt | awk  'OFS="\t" {print $1,$2,$3}' - > "$OUTDIR"/finalMP/"$i"_allSNPs_unique.bed
 
 #	 sort -k1,1 -k2,2n "$OUTDIR"/finalMP/"$i"_allSNPs_unique.bed  >"$OUTDIR"/finalMP/"$i"_allSNPs_unique_sorted.bed
+
+	###I also want to add the information of identity of the SNP..  
+
+	cat "$OUTDIR"/finalMP/SNPidentity_"$i"_*.txt | awk -F"\t" '!seen[$1, $2]++' - > "$OUTDIR"/finalMP/SNPidentity_combined_"$i".txt    ### getting the unique lines... 
+	awk '{$4=$2+1}1' "$OUTDIR"/finalMP/SNPidentity_combined_"$i".txt | awk  'OFS="\t" {print $1,$2,$4, $3}' - > "$OUTDIR"/finalMP/"$i"_allSNPs_unique.bed
+
 
 done
 
