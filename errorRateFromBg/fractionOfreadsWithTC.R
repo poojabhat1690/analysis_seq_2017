@@ -23,13 +23,13 @@ theme_ameres <- function (type) {  ### plotting function
   
 }
 
-
+`%!in%` = Negate(`%in%`)
 ######### preparing the data tables...of the fraction of reads with 1,2,...n TCs... (run on cluster)
 
 ####### getting the fraction of reads separately for mitochondrial genes
 
 
-folder = "/groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/probabilityOfFindingTC/zygoticTranscripts_vectorized/"
+folder = "/groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/probabilityOfFindingTC/zygoticTranscripts_vectorized_dr11/"
 treatmentSamples = list.files(path = folder,pattern = "freqAllMutations_allTranscripts_totalSNP*")
 treatmentSamples_Inj = treatmentSamples[grep("Inj",treatmentSamples)] %>% paste0(folder,.)
 treatmentSamples_Unt = treatmentSamples[grep("Unt",treatmentSamples)] %>% paste0(folder,.)
@@ -57,18 +57,44 @@ getTabulatedTcs = function(sampleName){ ###3 get fraction of reads with 1TC, 2 T
   fractionTC_samples_reads[[2]] = totalReads
 
   ##### only mitochondria
-  #fractionTC_samplesMt = table(sampleData_mt$T_C)/nrow(sampleData_mt)
-  fractionTC_samplesMt = apply(sampleData_mt[,1:12],2,function(x) table(x)/length(x))
-  totalReads_mt =   apply(sampleData_mt[,1:12],2,function(x) table(x))
+  sampleData_mt$idTmp = unlist(lapply(strsplit(as.character(sampleData_mt$id),"-",T),function(x) x[1]))
+  #### reading in the mitochondrial dataset from ensembl annotation 
+  
+  allTranscripts = read.table("//groups/ameres/Pooja/Projects/zebrafishAnnotation/dr11/ensembl_dr11_Ensembl_Genes_93/allTranscripts.txt",sep="\t",header = T)
+  transcripts_mt = allTranscripts %>% dplyr::filter(chromosome_name == "chrM") %>% dplyr::filter(gene_biotype == "protein_coding")
+  allCountingWindows = read.table("//groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/allStagesCombined_new/allAnnotations_withPriMirna.bed",sep="\t")
+  allCountingWindows_mt = allCountingWindows %>% dplyr::filter(V1 == "chrM")
+  colnames(allCountingWindows_mt) = c("V1","V2","V3","ensembl_gene_id","V5","V6")
+  allCountingWindows_mt = dplyr::left_join(transcripts_mt,allCountingWindows_mt) %>% dplyr::mutate(id=paste0(V1,":",V2+1))
+  allCountingWindows_finalMt = allCountingWindows[allCountingWindows$V4 %in% allCountingWindows_mt$ensembl_transcript_id,]
+  allCountingWindows_finalMt = allCountingWindows_finalMt %>% dplyr::mutate(id = paste0(V1,":",V2+1))
+  #### getting the protein codig part of the mitochondrial transcripts. 
+  sampleData_mt_proteinCoding = sampleData_mt[sampleData_mt$idTmp %in% allCountingWindows_finalMt$id,]   %>% dplyr::select(-"idTmp")
+  sampleData_mt_NOTproteinCoding = sampleData_mt[sampleData_mt$idTmp %!in% allCountingWindows_finalMt$id,]   %>% dplyr::select(-"idTmp")
+  
+  fractionTC_samplesMt_proteinCoding = apply(sampleData_mt_proteinCoding[,1:12],2,function(x) table(x)/length(x))
+  totalReads_mt_proteinCoding =   apply(sampleData_mt_proteinCoding[,1:12],2,function(x) table(x))
 
+  fractionTC_samplesMt_NOTproteinCoding = apply(sampleData_mt_NOTproteinCoding[,1:12],2,function(x) table(x)/length(x))
+  totalReads_mt_NOTproteinCoding =   apply(sampleData_mt_NOTproteinCoding[,1:12],2,function(x) table(x))
+  
   #totalReads_mt = table(sampleData_mt$T_C)
-  fractionTC_samples_reads_mt = vector("list",2)
-  names(fractionTC_samples_reads_mt) = c("fractionTC","numberOfreads")
-  fractionTC_samples_reads_mt[[1]] = fractionTC_samplesMt
-  fractionTC_samples_reads_mt[[2]] = totalReads_mt
+  
+  #### protein coding MT
+  fractionTC_samples_reads_mt_proteinCoding = vector("list",2)
+  names(fractionTC_samples_reads_mt_proteinCoding) = c("fractionTC","numberOfreads")
+  fractionTC_samples_reads_mt_proteinCoding[[1]] = fractionTC_samplesMt_proteinCoding
+  fractionTC_samples_reads_mt_proteinCoding[[2]] = totalReads_mt_proteinCoding
 
-  totalFracs = list(fractionTC_samples_reads_mt,fractionTC_samples_reads)
-  names(totalFracs) = c("mt","allOther")
+  fractionTC_samples_reads_mt_NOTproteinCoding = vector("list",2)
+  names(fractionTC_samples_reads_mt_NOTproteinCoding) = c("fractionTC","numberOfreads")
+  fractionTC_samples_reads_mt_NOTproteinCoding[[1]] = fractionTC_samplesMt_NOTproteinCoding
+  fractionTC_samples_reads_mt_NOTproteinCoding[[2]] = totalReads_mt_NOTproteinCoding
+  
+  
+  
+  totalFracs = list(fractionTC_samples_reads_mt_proteinCoding,fractionTC_samples_reads_mt_NOTproteinCoding,fractionTC_samples_reads)
+  names(totalFracs) = c("mt_proteinCoding","mt_notProteinCoding","allOther")
   return(totalFracs)
 }
 
@@ -186,7 +212,7 @@ TPs = paste0("TP",c(1:9))
 library(RColorBrewer)
 colsUse = c(brewer.pal(n = 8,"Dark2"),brewer.pal(n = 4,"Set1"))
 
-pdf("//Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/plots/errorRates_untreatedTCs/otherMutations_compareTC.pdf",height = 5,width = 5)
+pdf("//Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/plots/errorRates_untreatedTCs/otherMutations_compareTC_mtSeparated.pdf",height = 5,width = 5)
 for(i in 1:length(TPs)){
   
   load("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/errorRates_untreatedSamples_zebrafish/FractionOfTCreads_totalNumberOfreads_InjectedSamples.Rdata")
@@ -240,7 +266,14 @@ for(i in 1:length(TPs)){
   r_TC = r %>% filter(id_final=='T_C') %>% mutate(type="T_C")
   r_other = r %>% filter(id_final !='T_C') %>% mutate(type = 'other')
   r_total = rbind(r_TC,r_other)
-  s = ggplot(data = r_total %>% filter(numberNt<5) ,aes(x=type,y=fractionReads,fill=type,group=type)) + geom_violin()  +   scale_y_continuous(trans='log10',breaks = trans_breaks("log10", function(x) 10^x ),labels = trans_format("log10", math_format(10^.x))) + ggtitle("mt-distributionFractionReads") + theme_ameres(type = 'barplot')
+ plot_diffCols =  ggplot() + geom_point(data = r %>% filter(id_final == "T_C"),aes(x=numberNt,y=fractionReads),size=2.5)  + geom_line(data = r %>% filter(id_final == "T_C"),aes(x=numberNt,y=fractionReads),col='darkgreen',size=1.5) +  geom_boxplot(data = r %>% filter(id_final != "T_C"),aes(x=numberNt,y=fractionReads,group=numberNt),fill='red') +  
+    geom_line(data = r %>% filter(id_final != "T_C"),aes(x=numberNt,y=fractionReads,group=id_final,col=id_final)) +   scale_y_continuous(trans='log10',breaks = trans_breaks("log10", function(x) 10^x ),labels = trans_format("log10", math_format(10^.x))) + theme_ameres(type = "barplot") +
+    scale_color_manual(values = colsUse) + ggtitle(paste0("mt-",TPs[i]))  + xlab("Number of conversions") + ylab("Fraction of reads")  + scale_x_continuous(breaks = c(0,1,2,3,4,5, 6,7,8,9,10)) + xlim(c(0,5))
+  print(plot_diffCols)
+  
+  
+  
+   s = ggplot(data = r_total %>% filter(numberNt<5) ,aes(x=type,y=fractionReads,fill=type,group=type)) + geom_violin()  +   scale_y_continuous(trans='log10',breaks = trans_breaks("log10", function(x) 10^x ),labels = trans_format("log10", math_format(10^.x))) + ggtitle("mt-distributionFractionReads") + theme_ameres(type = 'barplot')
   print(s)
   
     r = ggplot() + geom_point(data = r %>% filter(id_final == "T_C"),aes(x=numberNt,y=fractionReads),size=2.5)  + geom_line(data = r %>% filter(id_final == "T_C"),aes(x=numberNt,y=fractionReads),col='darkgreen',size=1.5) +  geom_boxplot(data = r %>% filter(id_final != "T_C"),aes(x=numberNt,y=fractionReads,group=numberNt),fill='red') +  
@@ -248,7 +281,7 @@ for(i in 1:length(TPs)){
     scale_color_manual(values = colsUse) + ggtitle(paste0("mt-",TPs[i]))  + xlab("Number of conversions") + ylab("Fraction of reads")  + scale_x_continuous(breaks = c(0,1,2,3,4,5, 6,7,8,9,10)) + xlim(c(0,5))
   print(r)
   
-  
+    
 
   #### doing the same for the background data...
   
@@ -285,17 +318,40 @@ print(tcplots)
   # print(bg_all) 
   # 
   
-  sample_TCs_TP_bg_mt = lapply(sample_TCs,function(x) x$mt)
+  sample_TCs_TP_bg_mt = lapply(sample_TCs,function(x) x$mt_proteinCoding)
   sample_TCs_TP_bg_mt = sample_TCs_TP_bg_mt[grep(TPs[i],names(sample_TCs_TP_bg_mt))] 
   sample_TCs_TP_bg_mt = sample_TCs_TP_bg_mt[[1]]$numberOfreads
   
   bg_mt = lapply(sample_TCs_TP_bg_mt,function(x) data.frame(x)) %>% plyr::ldply(., rbind)%>%
-    dplyr::group_by(.data = .,.id) %>% gplyr::mutate(fractionReads = Freq/sum(Freq)) 
+    dplyr::group_by(.data = .,.id) %>% dplyr::mutate(fractionReads = Freq/sum(Freq)) 
   bg_mt = as.data.frame(bg_mt)
   bg_mt$x = as.numeric(bg_mt$x)
+  bg_mt_diffCols = ggplot() + geom_point(data =as.data.frame(bg_mt) %>% filter(.id == "T_C"),aes(x=x,y=fractionReads),size=2.5)  + geom_line(data = as.data.frame(bg_mt) %>% filter(.id == "T_C"),aes(x=x,y=fractionReads,group=.id),col='darkgreen',size=1.5) +  geom_boxplot(data = as.data.frame(bg_mt) %>% filter(.id != "T_C"),aes(x=x,y=fractionReads,group=x),fill='red') +  
+    geom_line(data = as.data.frame(bg_mt) %>% filter(.id != "T_C"),aes(x=x,y=fractionReads,group=.id,col=.id)) +   scale_y_continuous(trans='log10',breaks = trans_breaks("log10", function(x) 10^x ),labels = trans_format("log10", math_format(10^.x))) + theme_ameres(type = "barplot") +
+    scale_color_manual(values = colsUse) + ggtitle(paste0("mt_bg-",TPs[i]))  + xlab("Number of conversions") + ylab("Fraction of reads")  + scale_x_continuous( limits = c(0,5),breaks = c(0,1,2,3,4,5, 6,7,8,9,10)) 
+  print(bg_mt_diffCols)
+  
   bg_mt = ggplot() + geom_point(data =as.data.frame(bg_mt) %>% filter(.id == "T_C"),aes(x=x,y=fractionReads),size=2.5)  + geom_line(data = as.data.frame(bg_mt) %>% filter(.id == "T_C"),aes(x=x,y=fractionReads,group=.id),col='darkgreen',size=1.5) +  geom_boxplot(data = as.data.frame(bg_mt) %>% filter(.id != "T_C"),aes(x=x,y=fractionReads,group=x),fill='red') +  
     geom_line(data = as.data.frame(bg_mt) %>% filter(.id != "T_C"),aes(x=x,y=fractionReads,group=.id),col='grey') +   scale_y_continuous(trans='log10',breaks = trans_breaks("log10", function(x) 10^x ),labels = trans_format("log10", math_format(10^.x))) + theme_ameres(type = "barplot") +
     scale_color_manual(values = colsUse) + ggtitle(paste0("mt_bg-",TPs[i]))  + xlab("Number of conversions") + ylab("Fraction of reads")  + scale_x_continuous( limits = c(0,5),breaks = c(0,1,2,3,4,5, 6,7,8,9,10)) 
+  
+  
+  print(bg_mt)
+ 
+  ###### non protein conding mt RNA
+  
+  sample_TCs_TP_bg_mt = lapply(sample_TCs,function(x) x$mt_notProteinCoding)
+  sample_TCs_TP_bg_mt = sample_TCs_TP_bg_mt[grep(TPs[i],names(sample_TCs_TP_bg_mt))] 
+  sample_TCs_TP_bg_mt = sample_TCs_TP_bg_mt[[1]]$numberOfreads
+  bg_mt = lapply(sample_TCs_TP_bg_mt,function(x) data.frame(x)) %>% plyr::ldply(., rbind)%>%
+    dplyr::group_by(.data = .,.id) %>% dplyr::mutate(fractionReads = Freq/sum(Freq)) 
+  bg_mt = as.data.frame(bg_mt)
+  bg_mt$x = as.numeric(bg_mt$x)
+  
+  
+  bg_mt = ggplot() + geom_point(data =as.data.frame(bg_mt) %>% filter(.id == "T_C"),aes(x=x,y=fractionReads),size=2.5)  + geom_line(data = as.data.frame(bg_mt) %>% filter(.id == "T_C"),aes(x=x,y=fractionReads,group=.id),col='darkgreen',size=1.5) +  geom_boxplot(data = as.data.frame(bg_mt) %>% filter(.id != "T_C"),aes(x=x,y=fractionReads,group=x),fill='red') +  
+    geom_line(data = as.data.frame(bg_mt) %>% filter(.id != "T_C"),aes(x=x,y=fractionReads,group=.id),col='grey') +   scale_y_continuous(trans='log10',breaks = trans_breaks("log10", function(x) 10^x ),labels = trans_format("log10", math_format(10^.x))) + theme_ameres(type = "barplot") +
+    scale_color_manual(values = colsUse) + ggtitle(paste0("mt_bg non protein coding-",TPs[i]))  + xlab("Number of conversions") + ylab("Fraction of reads")  + scale_x_continuous( limits = c(0,5),breaks = c(0,1,2,3,4,5, 6,7,8,9,10)) 
   
   
   print(bg_mt)
