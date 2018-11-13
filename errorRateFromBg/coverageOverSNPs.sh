@@ -38,21 +38,52 @@ do
 	        ### getting a bam file that overlaps with the SNPs... 
 		
 #		samtools view -b  -L /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/allStagesCombined_new/allAnnotations_withPriMirna.bed  /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11/filter/"$i" > "$OUTDIR"/"$i"_relavant.bam
+		
 
-#		samtools view	"$OUTDIR"/"$i"_relavant.bam  | awk -v OFS='\t' '{print $3,$4, $24}' - > "$OUTDIR"/"$i"_relavant_readsWithMPtags.txt
+		
 
 #		 awk  '$3!=""'   "$OUTDIR"/"$i"_relavant_readsWithMPtags.txt   | awk '{split($3,a,"MP:Z:"); print a[3] a[2] a[1]}' -  |  awk -F"," '$1=$1' OFS="\t" -  > "$OUTDIR"/"$i"_relavant_readsMPtagsSeparated.txt
 
-#		samtools view "$OUTDIR"/"$i"_relavant.bam  | grep MP: - | awk -v OFS='\t' '{print $3,$4, $24}' - > "$OUTDIR"/"$i"_relavantCols.txt 
+		#samtools view "$OUTDIR"/"$i"_relavant.bam  | grep MP: - | awk -v OFS='\t' '{print $3,$4, $24, $2}' - > "$OUTDIR"/"$i"_relavantCols.txt 
 
-#		 awk '{split($3,a,"MP:Z:"); print a[3] a[2] a[1]}' "$OUTDIR"/"$i"_relavantCols.txt  |  awk -F"," '$1=$1' OFS="\t" - > "$OUTDIR"/"$i"_MPtags_split.txt
+	#awk '$4==16' "$OUTDIR"/"$i"_relavantCols.txt > "$OUTDIR"/"$i"_relavantCols_minus.txt ### splitting into plus and minus strand reads and splitting the MP tags separately
+	#awk '$4!=16' "$OUTDIR"/"$i"_relavantCols.txt > "$OUTDIR"/"$i"_relavantCols_plus.txt
+	 
+	awk '{split($3,a,"MP:Z:"); print a[3] a[2] a[1] }' "$OUTDIR"/"$i"_relavantCols_minus.txt  |  awk -F"," '$1=$1' OFS="\t" - > "$OUTDIR"/"$i"_MPtags_split_minus.txt 
+	awk '{split($3,a,"MP:Z:"); print a[3] a[2] a[1]}' "$OUTDIR"/"$i"_relavantCols_plus.txt  |  awk -F"," '$1=$1' OFS="\t" - > "$OUTDIR"/"$i"_MPtags_split_plus.txt             
 
-		 MAXCOL=`awk '{if (NF > max) {max = NF; line=$0}} END{print line}' "$OUTDIR"/"$i"_MPtags_split.txt  | awk '{print NF}'` 
+	awk '{print $1, $2}' "$OUTDIR"/"$i"_relavantCols_minus.txt  > "$OUTDIR"/"$i"_metadata_minus.txt ######keep metadata
+	awk '{print $1, $2}' "$OUTDIR"/"$i"_relavantCols_plus.txt  > "$OUTDIR"/"$i"_metadata_plus.txt
 
 
-		for ((j=1;j<="$MAXCOL";j+=1))
 
-		 do
+
+		 MAXCOLMINUS=`awk '{if (NF > max) {max = NF; line=$0}} END{print line}' "$OUTDIR"/"$i"_MPtags_split_minus.txt  | awk '{print NF}'`
+		 MAXCOLPLUS=`awk '{if (NF > max) {max = NF; line=$0}} END{print line}' "$OUTDIR"/"$i"_MPtags_split_plus.txt  | awk '{print NF}'` 
+
+
+		for ((j=1;j<="$MAXCOLMINUS";j+=1))
+		do
+			awk -v f="$j" -F '\t' '{print $f}' "$OUTDIR"/"$i"_MPtags_split_minus.txt | awk '{split($1,a,":"); print a[3]}' -    > "$OUTDIR"/"$i"_MPtags_split_minus"$j".txt #### get the reference position from MP tag
+			awk -v f="$j" -F '\t' '{print $f}' "$OUTDIR"/"$i"_MPtags_split_minus.txt | awk '{split($1,a,":"); print a[1]}' -     > "$OUTDIR"/"$i"_MPtags_identity_minus"$j".txt #### get SNP identity from MP tag
+			paste  "$OUTDIR"/"$i"_metadata_minus.txt "$OUTDIR"/"$i"_MPtags_split_minus"$j".txt "$OUTDIR"/"$i"_MPtags_identity_minus"$j".txt | awk '$3 >=0' -  > "$OUTDIR"/"$i"_MPtag_SNPidentity_minus"$j".txt #### adding the tag and identity together.
+			  ####also adding tge metadata
+		done
+
+
+		for ((j=1;j<="$MAXCOLPLUS";j+=1))
+		do
+		  	awk -v f="$j" -F '\t' '{print $f}' "$OUTDIR"/"$i"_MPtags_split_plus.txt | awk '{split($1,a,":"); print a[3]}'  -   > "$OUTDIR"/"$i"_MPtags_split_plus"$j".txt
+			awk -v f="$j" -F '\t' '{print $f}' "$OUTDIR"/"$i"_MPtags_split_plus.txt | awk '{split($1,a,":"); print a[1]}'  -   > "$OUTDIR"/"$i"_MPtags_identity_plus"$j".txt
+			paste  "$OUTDIR"/"$i"_metadata_plus.txt "$OUTDIR"/"$i"_MPtags_split_plus"$j".txt "$OUTDIR"/"$i"_MPtags_identity_plus"$j".txt | awk '$3 >=0' -  > "$OUTDIR"/"$i"_MPtag_SNPidentity_plus"$j".txt #### adding the tag and identity together.
+		done
+
+
+
+
+		#for ((j=1;j<="$MAXCOL";j+=1))
+
+		 #do
 
 #		 	echo "$j"
 
@@ -64,9 +95,9 @@ do
 
 #			paste "$OUTDIR"/"$i"_relavantCols.txt "$OUTDIR"/"$i"_MPtags_split_"$j".txt | awk '{ print $2+$4; }' - | paste "$OUTDIR"/"$i"_relavantCols.txt - | awk '$2!=$4' - | awk '{print $1, $4}' > "$OUTDIR"/finalMP/SNP_"$i"_"$j".txt
 
-	paste "$OUTDIR"/"$i"_relavantCols.txt "$OUTDIR"/"$i"_MPtags_split_"$j".txt | awk '{ print $2+$4; }' - | paste "$OUTDIR"/"$i"_relavantCols.txt - | awk '$2!=$4' - | awk '{print $1, $4}' - | paste  - "$OUTDIR"/"$i"_identityOfSNP_split_"$j".txt | awk -v OFS='\t' '{print $1, $2, $3}' - | awk '$3!=""' -  > "$OUTDIR"/finalMP/SNPidentity_"$i"_"$j".txt
+#	paste "$OUTDIR"/"$i"_relavantCols.txt "$OUTDIR"/"$i"_MPtags_split_"$j".txt | awk '{ print $2+$4; }' - | paste "$OUTDIR"/"$i"_relavantCols.txt - | awk '$2!=$4' - | awk '{print $1, $4}' - | paste  - "$OUTDIR"/"$i"_identityOfSNP_split_"$j".txt | awk -v OFS='\t' '{print $1, $2, $3}' - | awk '$3!=""' -  > "$OUTDIR"/finalMP/SNPidentity_"$i"_"$j".txt
 
-		done
+#		done
 
 	
 
@@ -79,8 +110,8 @@ do
 
 	###I also want to add the information of identity of the SNP..  
 
-	cat "$OUTDIR"/finalMP/SNPidentity_"$i"_*.txt | awk -F"\t" '!seen[$1, $2]++' - > "$OUTDIR"/finalMP/SNPidentity_combined_"$i".txt    ### getting the unique lines... 
-	awk '{$4=$2+1}1' "$OUTDIR"/finalMP/SNPidentity_combined_"$i".txt | awk  'OFS="\t" {print $1,$2,$4, $3}' - > "$OUTDIR"/finalMP/"$i"_allSNPs_unique.bed
+#	cat "$OUTDIR"/finalMP/SNPidentity_"$i"_*.txt | awk -F"\t" '!seen[$1, $2]++' - > "$OUTDIR"/finalMP/SNPidentity_combined_"$i".txt    ### getting the unique lines... 
+#	awk '{$4=$2+1}1' "$OUTDIR"/finalMP/SNPidentity_combined_"$i".txt | awk  'OFS="\t" {print $1,$2,$4, $3}' - > "$OUTDIR"/finalMP/"$i"_allSNPs_unique.bed
 
 
 done
