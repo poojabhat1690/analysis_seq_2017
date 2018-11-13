@@ -49,11 +49,11 @@ do
 	#awk '$4==16' "$OUTDIR"/"$i"_relavantCols.txt > "$OUTDIR"/"$i"_relavantCols_minus.txt ### splitting into plus and minus strand reads and splitting the MP tags separately
 	#awk '$4!=16' "$OUTDIR"/"$i"_relavantCols.txt > "$OUTDIR"/"$i"_relavantCols_plus.txt
 	 
-	awk '{split($3,a,"MP:Z:"); print a[3] a[2] a[1] }' "$OUTDIR"/"$i"_relavantCols_minus.txt  |  awk -F"," '$1=$1' OFS="\t" - > "$OUTDIR"/"$i"_MPtags_split_minus.txt 
-	awk '{split($3,a,"MP:Z:"); print a[3] a[2] a[1]}' "$OUTDIR"/"$i"_relavantCols_plus.txt  |  awk -F"," '$1=$1' OFS="\t" - > "$OUTDIR"/"$i"_MPtags_split_plus.txt             
+	#awk '{split($3,a,"MP:Z:"); print a[3] a[2] a[1] }' "$OUTDIR"/"$i"_relavantCols_minus.txt  |  awk -F"," '$1=$1' OFS="\t" - > "$OUTDIR"/"$i"_MPtags_split_minus.txt 
+	#awk '{split($3,a,"MP:Z:"); print a[3] a[2] a[1]}' "$OUTDIR"/"$i"_relavantCols_plus.txt  |  awk -F"," '$1=$1' OFS="\t" - > "$OUTDIR"/"$i"_MPtags_split_plus.txt             
 
-	awk '{print $1, $2}' "$OUTDIR"/"$i"_relavantCols_minus.txt  > "$OUTDIR"/"$i"_metadata_minus.txt ######keep metadata
-	awk '{print $1, $2}' "$OUTDIR"/"$i"_relavantCols_plus.txt  > "$OUTDIR"/"$i"_metadata_plus.txt
+	#awk '{print $1, $2}' "$OUTDIR"/"$i"_relavantCols_minus.txt  > "$OUTDIR"/"$i"_metadata_minus.txt ######keep metadata
+	#awk '{print $1, $2}' "$OUTDIR"/"$i"_relavantCols_plus.txt  > "$OUTDIR"/"$i"_metadata_plus.txt
 
 
 
@@ -71,48 +71,31 @@ do
 		done
 
 
-		for ((j=1;j<="$MAXCOLPLUS";j+=1))
-		do
-		  	awk -v f="$j" -F '\t' '{print $f}' "$OUTDIR"/"$i"_MPtags_split_plus.txt | awk '{split($1,a,":"); print a[3]}'  -   > "$OUTDIR"/"$i"_MPtags_split_plus"$j".txt
-			awk -v f="$j" -F '\t' '{print $f}' "$OUTDIR"/"$i"_MPtags_split_plus.txt | awk '{split($1,a,":"); print a[1]}'  -   > "$OUTDIR"/"$i"_MPtags_identity_plus"$j".txt
-			paste  "$OUTDIR"/"$i"_metadata_plus.txt "$OUTDIR"/"$i"_MPtags_split_plus"$j".txt "$OUTDIR"/"$i"_MPtags_identity_plus"$j".txt | awk '$3 >=0' -  > "$OUTDIR"/"$i"_MPtag_SNPidentity_plus"$j".txt #### adding the tag and identity together.
-		done
+		#for ((j=1;j<="$MAXCOLPLUS";j+=1))
+		#do
+		 # 	awk -v f="$j" -F '\t' '{print $f}' "$OUTDIR"/"$i"_MPtags_split_plus.txt | awk '{split($1,a,":"); print a[3]}'  -   > "$OUTDIR"/"$i"_MPtags_split_plus"$j".txt
+		#	awk -v f="$j" -F '\t' '{print $f}' "$OUTDIR"/"$i"_MPtags_split_plus.txt | awk '{split($1,a,":"); print a[1]}'  -   > "$OUTDIR"/"$i"_MPtags_identity_plus"$j".txt
+		#	paste  "$OUTDIR"/"$i"_metadata_plus.txt "$OUTDIR"/"$i"_MPtags_split_plus"$j".txt "$OUTDIR"/"$i"_MPtags_identity_plus"$j".txt | awk '$3 >=0' -  > "$OUTDIR"/"$i"_MPtag_SNPidentity_plus"$j".txt #### adding the tag and identity together.
+		#done
 
 
+		### combine all minus and all plus together. 
+		### create bed format file, which also contains the information about strand and the identity of the SNP
+		### remove duplicated entries from the bed file. 
+		### combine plus and minus files.
 
+		minus=-
+		plus=+
+		cat "$OUTDIR"/"$i"_MPtag_SNPidentity_minus* | awk -v OFS='\t' {'print $1, $2 + $3, $2 + $3 + 1 , $3, $4'} - | awk -F"\t" '!seen[$1, $2, $3]++' -   > "$OUTDIR"/"$i"_combined_minus.txt 
+		cat "$OUTDIR"/"$i"_MPtag_SNPidentity_plus* | awk -v OFS='\t'  {'print $1, $2 + $3, $2 + $3 + 1 , $3, $4'} - |  awk -F"\t" '!seen[$1, $2, $3]++' -  > "$OUTDIR"/"$i"_combined_plus.txt
+		sed -i "s/$/\t$minus/" "$OUTDIR"/"$i"_combined_minus.txt  
+		sed -i "s/$/\t$plus/" "$OUTDIR"/"$i"_combined_plus.txt  
+		
+		cat "$OUTDIR"/"$i"_combined_minus.txt  "$OUTDIR"/"$i"_combined_plus.txt |  awk -F"\t" '!seen[$1, $2, $3]++' - > "$OUTDIR"/"$i"_combined_total.txt
 
-		#for ((j=1;j<="$MAXCOL";j+=1))
-
-		 #do
-
-#		 	echo "$j"
-
-#			awk -v f="$j" -F '\t' '{print $f}' "$OUTDIR"/"$i"_MPtags_split.txt | awk '{split($1,a,":"); print a[3]}'   >"$OUTDIR"/"$i"_MPtags_split_"$j".txt
-
-
-			###### i also want to get the identity of these SNPs
-#			awk -v f="$j" -F '\t' '{print $f}' "$OUTDIR"/"$i"_MPtags_split.txt | awk '{split($1,a,":"); print a[1]}'   >"$OUTDIR"/"$i"_identityOfSNP_split_"$j".txt
-
-#			paste "$OUTDIR"/"$i"_relavantCols.txt "$OUTDIR"/"$i"_MPtags_split_"$j".txt | awk '{ print $2+$4; }' - | paste "$OUTDIR"/"$i"_relavantCols.txt - | awk '$2!=$4' - | awk '{print $1, $4}' > "$OUTDIR"/finalMP/SNP_"$i"_"$j".txt
-
-#	paste "$OUTDIR"/"$i"_relavantCols.txt "$OUTDIR"/"$i"_MPtags_split_"$j".txt | awk '{ print $2+$4; }' - | paste "$OUTDIR"/"$i"_relavantCols.txt - | awk '$2!=$4' - | awk '{print $1, $4}' - | paste  - "$OUTDIR"/"$i"_identityOfSNP_split_"$j".txt | awk -v OFS='\t' '{print $1, $2, $3}' - | awk '$3!=""' -  > "$OUTDIR"/finalMP/SNPidentity_"$i"_"$j".txt
-
-#		done
-
+	 	sort -k1,1 -k2,2n "$OUTDIR"/"$i"_combined_total.txt  > "$OUTDIR"/"$i"_combined_total_sorted.bed
+		
 	
-
-
-#	cat "$OUTDIR"/finalMP/SNP_"$i"_* | awk -F"\t" '!seen[$1, $2]++' - > "$OUTDIR"/finalMP/"$i"_allSNPs_unique.txt
-
-#	awk '{$3=$2+1}1' "$OUTDIR"/finalMP/"$i"_allSNPs_unique.txt | awk  'OFS="\t" {print $1,$2,$3}' - > "$OUTDIR"/finalMP/"$i"_allSNPs_unique.bed
-
-#	 sort -k1,1 -k2,2n "$OUTDIR"/finalMP/"$i"_allSNPs_unique.bed  >"$OUTDIR"/finalMP/"$i"_allSNPs_unique_sorted.bed
-
-	###I also want to add the information of identity of the SNP..  
-
-#	cat "$OUTDIR"/finalMP/SNPidentity_"$i"_*.txt | awk -F"\t" '!seen[$1, $2]++' - > "$OUTDIR"/finalMP/SNPidentity_combined_"$i".txt    ### getting the unique lines... 
-#	awk '{$4=$2+1}1' "$OUTDIR"/finalMP/SNPidentity_combined_"$i".txt | awk  'OFS="\t" {print $1,$2,$4, $3}' - > "$OUTDIR"/finalMP/"$i"_allSNPs_unique.bed
-
 
 done
 
@@ -128,6 +111,9 @@ done
 ml bedtools/2.27.1-foss-2017a  
 
 cd /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11/filter/
+
+
+######################### converting merged bam files to bed files and sorting by chromosome and position. 
 
 
 #for i in finalBam*.bam
@@ -147,72 +133,70 @@ cd /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/
 #done
 
 
-#also convertin indicidual bam files to bed files 
-
-#mkdir -p "$OUTDIR"/finalMP_bamFiles/
-
-#cd /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11/filter/
-
-#for i in  combinedFile_*.bam
-
-#	do
-#		bedtools bamtobed -i "$i" > "$OUTDIR"/finalMP_bamFiles/"$i".bed
-#	done
-
-####### now used bed tools coverage to calculate reads spanning the identified SNPS.. 
-
-
-mkdir "$OUTDIR"/finalMP/coverage/
-mkdir /scratch/pooja/R1_coverage/
 
 
 
-ml bedtools/2.27.1-foss-2017a  
 
 
 
-	cd "$OUTDIR"/finalMP/
 
-	#for i in  combin*allSNPs_unique_sorted.bed
-	#do 
-	#	name=a
-	#	sed -i "s/$/\t$name/"  "$OUTDIR"/finalMP/"$i"
-	#	score=0
-	#	sed -i "s/$/\t$score/"  "$OUTDIR"/finalMP/"$i"
-	#	strand=+
-	#	sed -i "s/$/\t$strand/"  "$OUTDIR"/finalMP/"$i"
-	#	echo  "$i"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		
-	#bedtools coverage  -a "$i" -b "$OUTDIR"/finalMP/finalBamFile.bam_sorted.bed  > "$OUTDIR"/finalMP/coverage/R1/"$i"_coverage.bed
-
-	#done
 
 
 
 
-#mkdir "$OUTDIR"/finalMP/coverage/R2/
 
 
- #       for i in  combin*_allSNPs_unique_sorted.bed     
 
 
-#		 do
 
-#				bedtools coverage -d -a "$i" -b finalBamFile_R2.bam.bed  > "$OUTDIR"/finalMP/coverage/R2/"$i"_coverage.bed
+
+
+
+
+
+
+
 								                
-#		done
 
 
 
-#mkdir "$OUTDIR"/finalMP/coverage/R3/
 
 
- #       for i in  combin*_allSNPs_unique_sorted.bed     
 
 
-#		                 do
 
-#					bedtools coverage -d -a "$i" -b finalBamFile_R3.bam.bed  > "$OUTDIR"/finalMP/coverage/R3/"$i"_coverage.bed
+
+
+
+
+
 									                                                                                 
-#				done
+
+
 
