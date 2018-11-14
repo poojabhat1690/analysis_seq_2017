@@ -249,7 +249,7 @@ for(i in 1:length(TPs)){
  
  #%>% ggpubr::ggline(.,x = 'numberNt',y='fractionReads',group='id_final',col='id_final' ) +  
    
-  sample_TCs_TP_mt = lapply(sample_TCs_injection_total,function(x) x$mt)
+  sample_TCs_TP_mt = lapply(sample_TCs_injection_total,function(x) x$mt_proteinCoding)
   
   
   sample_TCs_TP_mt = sample_TCs_TP_mt[grep(TPs[i],names(sample_TCs_TP_mt))] 
@@ -280,8 +280,33 @@ for(i in 1:length(TPs)){
     geom_line(data = r %>% filter(id_final != "T_C"),aes(x=numberNt,y=fractionReads,group=id_final),col='grey') +   scale_y_continuous(trans='log10',breaks = trans_breaks("log10", function(x) 10^x ),labels = trans_format("log10", math_format(10^.x))) + theme_ameres(type = "barplot") +
     scale_color_manual(values = colsUse) + ggtitle(paste0("mt-",TPs[i]))  + xlab("Number of conversions") + ylab("Fraction of reads")  + scale_x_continuous(breaks = c(0,1,2,3,4,5, 6,7,8,9,10)) + xlim(c(0,5))
   print(r)
+
+    ###### MT-non mRNA ...
   
-    
+  sample_TCs_TP_mt = lapply(sample_TCs_injection_total,function(x) x$mt_notProteinCoding)
+  
+  
+  sample_TCs_TP_mt = sample_TCs_TP_mt[grep(TPs[i],names(sample_TCs_TP_mt))] 
+  
+  sample_TCs_TP_mt = lapply(sample_TCs_TP_mt,function(x) x$numberOfreads)
+  
+  
+  r = lapply(sample_TCs_TP_mt,function(x) lapply(x,function(y) data.frame(y))) %>% lapply(. %>% plyr::ldply(., rbind)) %>% 
+    lapply(. %>% mutate(id = paste0(.id,"_",x))) %>% purrr::reduce(., full_join, by = 'id') %>% replace(., is.na(.), 0) %>% 
+    tidyr::separate(data = .,col = id,sep="_",into=c('firstNt','lastNt','numberNt')) %>% 
+    dplyr::mutate(totalReads = Freq.x + Freq.y + Freq) %>% dplyr::select(-matches('x.x|x.y|.id.x|.id.y')) %>%
+    dplyr::mutate(id_final = paste(firstNt,lastNt,sep="_")) %>% dplyr::group_by(id_final) %>% dplyr::mutate(fractionReads = totalReads/sum(totalReads)) %>%
+    dplyr::mutate(numberNt = as.numeric(numberNt))
+  r_TC = r %>% filter(id_final=='T_C') %>% mutate(type="T_C")
+  r_other = r %>% filter(id_final !='T_C') %>% mutate(type = 'other')
+  r_total = rbind(r_TC,r_other)
+  
+  r = ggplot() + geom_point(data = r %>% filter(id_final == "T_C"),aes(x=numberNt,y=fractionReads),size=2.5)  + geom_line(data = r %>% filter(id_final == "T_C"),aes(x=numberNt,y=fractionReads),col='darkgreen',size=1.5) +  geom_boxplot(data = r %>% filter(id_final != "T_C"),aes(x=numberNt,y=fractionReads,group=numberNt),fill='red') +  
+    geom_line(data = r %>% filter(id_final != "T_C"),aes(x=numberNt,y=fractionReads,group=id_final),col='grey') +   scale_y_continuous(trans='log10',breaks = trans_breaks("log10", function(x) 10^x ),labels = trans_format("log10", math_format(10^.x))) + theme_ameres(type = "barplot") +
+    scale_color_manual(values = colsUse) + ggtitle(paste0("mt-nonProtein coding",TPs[i]))  + xlab("Number of conversions") + ylab("Fraction of reads")  + scale_x_continuous(breaks = c(0,1,2,3,4,5, 6,7,8,9,10)) + xlim(c(0,5))
+  print(r)
+  
+  
 
   #### doing the same for the background data...
   
