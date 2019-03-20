@@ -2,5 +2,6 @@ this folder contains scripts that are used for SNP filtering.
 
 	 calling SNPs from combined files - per genotype
 	
-findSNPs_allStagesCombined.sh - combine files per genotype and call SNPs.
+	findSNPs_allStagesCombined.sh - combine files per genotype and call SNPs.
+	mergeVCFfiles.sh - combine the VCF files from all the genotypes and add it combine it with the SNPs detected using SLAMdunk. 
 	
