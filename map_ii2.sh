@@ -10,8 +10,9 @@
 #SBATCH --mail-user=pooja.bhat@imba.oeaw.ac.at
 #SBATCH  --qos=long
 
-        
-while getopts 'i: o: d: s:' OPTION; do
+
+
+while getopts 'i: o: d: c: p: s:' OPTION; do
           case "$OPTION" in   
                      i)        
                             ivalue="$OPTARG"
@@ -25,16 +26,26 @@ while getopts 'i: o: d: s:' OPTION; do
                     		indir="$OPTARG"
                     		echo "the input directory is $OPTARG"
                     		;;                
+
+		    c)
+			    CWs="$OPTARG"
+			    echo "the counting windows used are in file $OPTARG"
+			    ;;
+
+		    p)
+			   MMAP="$OPTARG"
+			  echo "the windows used for multimapping are $OPTARG"
+			    ;;
                     
                     s) 
-                    		sdir="$OPTARG"
+                   		sdir="$OPTARG"
                     		echo "the SLAMdunk optput is in $OPTARG"
 				;;
                                                                          
-                                                           ?)
-                                                                	echo "script usage: $(basename $0) [-a adapter]" >&2
-                                                                	exit 1
-                                                                	;;
+                     ?)
+                               echo "script usage: $(basename $0) " >&2
+                               exit 1
+                                ;;
                     esac
                                         done
                 shift "$(($OPTIND -1))"
@@ -50,24 +61,38 @@ module load fastx-toolkit/0.0.14-foss-2017a
 module load fastqc/0.11.5-java-1.8.0_121
 module load anaconda2/5.1.0
 module load  bedtools/2.25.0-foss-2017a
-module load r/3.4.1-foss-2017a-x11-20170314
+module load python/2.7.13-foss-2017a
+module load r/3.5.1-foss-2017a-x11-20170314-bare
+module load java/1.8.0_121
+module load singularity/2.5.2 
+
+
+if [ -e "$ovalue_adapter"/"$ivalue"_adapterTrimmed.fastq ]; then
+	echo "adapter trimmed file exists."
+else
+	echo "performing adapter clipping"
+
+	cutadapt -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCACNNNNNNATCTCGTATGCCGTCTTCTGCTTG -o "$ovalue_adapter"/"$ivalue"_adapterTrimmed.fastq -m 18 --trim-n "$indir"/"$ivalue"
+fi
 
 
 
 
-cutadapt -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCACNNNNNNATCTCGTATGCCGTCTTCTGCTTG -o "$ovalue_adapter"/"$ivalue"_adapterTrimmed.fastq -m 18 --trim-n "$indir"/"$ivalue"
+               #export PYTHONNOUSERSITE=1
+               
+	       #source activate slamdunk0.3.4
 
+        	#slamdunk --version 
+	       	#slamdunk all -r /groups/ameres/bioinformatics/references/danio_rerio/dr11/danRer11.fa -o "$sdir" -b "$CWs"  -fb "$MMAP" -a 5 -5 12 -n 100 -mv 0.2 -t 1 -mq 0 -mi 0.95 -m -rl 88 "$ovalue_adapter"/"$ivalue"_adapterTrimmed.fastq
 
-
-               export PYTHONNOUSERSITE=1
-                 source activate slamdunk0.3.3
-
+  
+         	#source deactivate
         
-       
 
-			slamdunk all -r /groups/ameres/bioinformatics/references/danio_rerio/dr11/danRer11.fa -o "$sdir" -b /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/allStagesCombined_new/allAnnotations_withPriMirna.bed  -fb /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/allStagesCombined_new/countingWindows_transcriptionalOutput_priMirna.bed -a 5 -5 12 -n 100 -mv 0.2 -t 15 -mq 0 -mi 0.95 -m -rl 88 "$ovalue_adapter"/"$ivalue"_adapterTrimmed.fastq
 
-       
-       
-                 source deactivate
-        
+
+		#### using the singularity module:
+
+	cd
+		singularity exec ./slamdunk-v0.3.4.simg slamdunk all -r /groups/ameres/bioinformatics/references/danio_rerio/dr11/danRer11.fa -o "$sdir" -b "$CWs"  -fb "$MMAP" -a 5 -5 12 -n 100 -mv 0.2 -t 1 -mq 0 -mi 0.95 -m -rl 88 "$ovalue_adapter"/"$ivalue"_adapterTrimmed.fastq
+
