@@ -1,0 +1,6 @@
+this folder contains scripts that are used for SNP filtering. 
+
+	 calling SNPs from combined files - per genotype
+	
+findSNPs_allStagesCombined.sh - combine files per genotype and call SNPs.
+	
