@@ -11,45 +11,104 @@
 
 ### this script merges VCF files from diff
 
-INDIR=/groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11/filter/
+INDIR=/groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11_0.3.4/filter/
 
-############ just adding these together 
+### adding back the genomtype specific SNPs to individual files... 
 
-cat "$INDIR"/varSample_R1_minCov.vcf "$INDIR"/varSample_R2_minCov.vcf "$INDIR"/varSample_R3_minCov.vcf > "$INDIR"/allConversions.vcf
+ grep R1 /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/sampleInfo/barcodes_description.txt | cut -f2 > /scratch/pooja/R1samples.txt
+  grep R2 /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/sampleInfo/barcodes_description.txt | cut -f2 > /scratch/pooja/R2samples.txt
+   grep R3 /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/sampleInfo/barcodes_description.txt | cut -f2 > /scratch/pooja/R3samples.txt
+   grep Unt /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/sampleInfo/barcodes_description.txt | cut -f2 > /scratch/pooja/Untreatedsamples.txt
 
-sed '/#/d' "$INDIR"/allConversions.vcf  > "$INDIR"/allConversions_cleaned.vcf 
-
-
-##### removing duplicates... 
-
-awk -F"\t" '!seen[$1, $2, $3, $4]++' "$INDIR"/allConversions_cleaned.vcf > "$INDIR"/allConversions_uniqueSNPs.vcf
-
-#### now i want to add the 'total' vcf files to the file specific vcf files...just loop over the file... 
-
-SNPDIR=/groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11/snp/
+SNPDIR=/groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11_0.3.4/snp
 
 cd "$SNPDIR"
 
-OUTDIR=/groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11/snp_combined/
+OUTDIR=/groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11_0.3.4/snp_combined/
 
 mkdir -p "$OUTDIR"
 
-for i in combinedFile**.vcf
 
-	do
+while read p; do
 
-		cat "$i" "$INDIR"/allConversions_uniqueSNPs.vcf > "$OUTDIR"/"$i"	
-		echo "$i" done	
-		
-		###### now I will again remove duplicates.. 
+	 cat combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf "$INDIR"/varSample_R1_minCov.vcf > "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf
+	echo "$p" "finished"  
+	                
 
-
-		awk -F"\t" '!seen[$1, $2, $3, $4]++' "$OUTDIR"/"$i" > "$OUTDIR"/"$i"_tmp
+	awk -F"\t" '!seen[$1, $2, $3, $4]++' "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf > "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf_tmp
 
 
-		mv "$OUTDIR"/"$i"_tmp "$OUTDIR"/"$i"
+	mv "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf_tmp "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf
+
+
+
+
+
+done <  /scratch/pooja/R1samples.txt
+
+
+
+### R2
+
+
+
+while read p; do
+
+         cat combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf "$INDIR"/varSample_R2_minCov.vcf > "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf
+	         echo "$p" "finished"  
+	awk -F"\t" '!seen[$1, $2, $3, $4]++' "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf > "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf_tmp
 	
-	done
+	mv "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf_tmp "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf
+
+done <  /scratch/pooja/R2samples.txt
+
+
+
+### R3
+
+
+
+
+while read p; do
+
+	         cat combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf "$INDIR"/varSample_R3_minCov.vcf > "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf
+		                  echo "$p" "finished"         
+				 
+				  awk -F"\t" '!seen[$1, $2, $3, $4]++' "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf > "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf_tmp
+				          
+				          mv "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf_tmp "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf
+
+				  done <  /scratch/pooja/R3samples.txt
+
+
+
+
+
+#### untreated 
+
+
+
+while read p; do
+
+	         cat combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf "$INDIR"/varSample_R1_minCov.vcf > "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf
+		  
+		 echo "$p" "finished"  
+			                         
+
+		awk -F"\t" '!seen[$1, $2, $3, $4]++' "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf > "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf_tmp
+
+
+		mv "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf_tmp "$OUTDIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered_snp.vcf
+
+
+done <  /scratch/pooja/Untreatedsamples.txt
+
+
+
+
+
+	
+
 
 
 
