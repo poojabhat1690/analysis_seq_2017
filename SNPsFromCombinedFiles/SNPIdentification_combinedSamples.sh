@@ -28,65 +28,58 @@ mkdir -p "$OUTDIR"
 
 
 
-######## now i can get the TC/AG conversions that are covered by <10 reads in the total combined files
- #grep ',<' "$OUTDIR"/finalBamFile_R1.vcf  | awk '$4 == "T" || $4=="A"' - | awk  '{split($8,a,";"); print $0,a[1]}'  | awk '{split($NF,a,"="); print $0,a[2]}' | awk  -v OFS="\t" '{print $1,$2,$4,$5,$12}' - | awk '$5<10' - | awk -v OFS="\t" '{split($4,a,","); print $0,a[1]}' | awk -v OFS="\t" '{print $0,$3 $6}' | awk '$7=="TC" || $7=="AG"' |  awk -v s=1 '{print $1, $2,$2+s,$7,$5,"+"}' -  | awk -v OFS="\t" '{print $1,$2,$3,$4,$5,$6}' - > "$OUTDIR"/finalBamFile_R1_position_lessthan10.bed
+######## now i can get the all Ts and all As  that are covered by <10 reads in the total combined files... 
 
-#grep ',<' "$OUTDIR"/finalBamFile_R2.vcf  | awk '$4 == "T" || $4=="A"' - | awk  '{split($8,a,";"); print $0,a[1]}'  | awk '{split($NF,a,"="); print $0,a[2]}' | awk  -v OFS="\t" '{print $1,$2,$4,$5,$12}' - | awk '$5<10' - | awk -v OFS="\t" '{split($4,a,","); print $0,a[1]}' | awk -v OFS="\t" '{print $0,$3 $6}' | awk '$7=="TC" || $7=="AG"' |  awk -v s=1 '{print $1, $2,$2+s,$7,$5,"+"}' -  | awk -v OFS="\t" '{print $1,$2,$3,$4,$5,$6}' -  > "$OUTDIR"/finalBamFile_R2_position_lessthan10.bed  
+awk '$6 == "+"' /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/allStagesCombined_new/allAnnotations_withPriMirna.bed > /scratch/pooja/Cws_plus.bed
+awk '$6 == "-"' /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/allStagesCombined_new/allAnnotations_withPriMirna.bed > /scratch/pooja/Cws_minus.bed
 
 
-#grep ',<' "$OUTDIR"/finalBamFile_R2.vcf  | awk '$4 == "T" || $4=="A"' - | awk  '{split($8,a,";"); print $0,a[1]}'  | awk '{split($NF,a,"="); print $0,a[2]}' | awk  -v OFS="\t" '{print $1,$2,$4,$5,$12}' - | awk '$5<10' - | awk -v OFS="\t" '{split($4,a,","); print $0,a[1]}' | awk -v OFS="\t" '{print $0,$3 $6}' | awk '$7=="TC" || $7=="AG"' |  awk -v s=1 '{print $1, $2,$2+s,$7,$5,"+"}' -  | awk -v OFS="\t" '{print $1,$2,$3,$4,$5,$6}' -  > "$OUTDIR"/finalBamFile_R3_position_lessthan10.bed  
+
+replicates=(R1 R2 R3)
+ 
+
+#for i in "${replicates[@]}"
+#do
+#	cat  "$OUTDIR"/finalBamFile_"$i".vcf  | awk '$4 == "T" || $4=="A"' - | awk  '{split($8,a,";"); print $0,a[1]}'  | awk '{split($NF,a,"="); print $0,a[2]}' | awk  -v OFS="\t" '{print $1,$2,$4,$5,$12}' - | awk '$5<10' - | awk -v OFS="\t" '{split($4,a,","); print $0,a[1]}' | awk -v OFS="\t" '{print $0,$3 $6}'  |  awk -v s=1 '{print $1, $2,$2+s,$7,$5, $3}' -  | awk -v OFS="\t" '{print $1,$2,$3,$4,$5,$6}' | awk '$6 == "A"' - | bedtools intersect -a "stdin" -b /scratch/pooja/Cws_minus.bed | awk -v OFS="\t" '{print $1, $2, $3, $4,$5, "-"}' - > /scratch/pooja/"$i"_minusOverlapping.bed
+
+
+#	  cat  "$OUTDIR"/finalBamFile_"$i".vcf  | awk '$4 == "T" || $4=="A"' - | awk  '{split($8,a,";"); print $0,a[1]}'  | awk '{split($NF,a,"="); print $0,a[2]}' | awk  -v OFS="\t" '{print $1,$2,$4,$5,$12}' - | awk '$5<10' - | awk -v OFS="\t" '{split($4,a,","); print $0,a[1]}' | awk -v OFS="\t" '{print $0,$3 $6}'  |  awk -v s=1 '{print $1, $2,$2+s,$7,$5, $3}' -  | awk -v OFS="\t" '{print $1,$2,$3,$4,$5,$6}' | awk '$6 == "T"' - | bedtools intersect -a "stdin" -b /scratch/pooja/Cws_plus.bed | awk -v OFS="\t" '{print $1, $2, $3, $4,$5, "+"}' - > /scratch/pooja/"$i"_plusOverlapping.bed
+
+
+#	  cat /scratch/pooja/"$i"_minusOverlapping.bed /scratch/pooja/"$i"_plusOverlapping.bed > "$OUTDIR"/finalBamFile_"$i"_position_lessthan10.bed
+#done
+
+
+
 
 
  grep R1 /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/sampleInfo/barcodes_description.txt | cut -f2 > /scratch/pooja/R1samples.txt
  grep R2 /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/sampleInfo/barcodes_description.txt | cut -f2 > /scratch/pooja/R2samples.txt
  grep R3 /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/sampleInfo/barcodes_description.txt | cut -f2 > /scratch/pooja/R3samples.txt
-grep Unt /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/sampleInfo/barcodes_description.txt | cut -f2 > /scratch/pooja/Untreatedsamples.txt
+ grep Unt /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/sampleInfo/barcodes_description.txt | cut -f2 > /scratch/pooja/Untreatedsamples.txt
 
 DIR="/groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11_0.3.4/filter/"
 OP="/groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11_0.3.4/filter_revised/"
+mkdir -p "$OP" 
 
-mkdir -p "$OP"
- while read p; do
+for i in "${replicates[@]}"
+do
 
-#	bedtools intersect -a "$DIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam -b /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11_0.3.4/snpFiltering//finalBamFile_R1_position_lessthan10.bed  -v >  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam
-	samtools index  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam.bai
- done <  /scratch/pooja/R1samples.txt
+	while read p; do
+
+		bedtools intersect -a "$DIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam -b /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11_0.3.4/snpFiltering//finalBamFile_"$i"_position_lessthan10.bed  -v >  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam
+	       samtools index  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam.bai
+	 
+       done <  /scratch/pooja/"$i"samples.txt	
+done
 
 
-
- #### R2
-
+##### the untreated sample comes from R1, so just removing R1 from the untreated samples. 
 
 
- mkdir -p "$OP"                                                                                                                                                                                                                                                                 
   while read p; do
 
-#	          bedtools intersect -a "$DIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam -b /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11_0.3.4/snpFiltering/finalBamFile_R2_position_lessthan10.bed  -v >  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam
-samtools index  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam.bai   
- done <  /scratch/pooja/R2samples.txt
-
-
-
-##### R3
-
-
-mkdir -p "$OP"                                                                                                                                                                                                                                                                 
- while read p; do
-
-#	         bedtools intersect -a "$DIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam -b /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11_0.3.4/snpFiltering/finalBamFile_R3_position_lessthan10.bed  -v >  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam
-
-samtools index  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam.bai   
-
-done <  /scratch/pooja/R3samples.txt
-
-
-####### untreated samples
-
-
-mkdir -p "$OP"
- while read p; do
-
-	 bedtools intersect -a "$DIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam -b /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11_0.3.4/snpFiltering//finalBamFile_R1_position_lessthan10.bed  -v >  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam
-	         samtools index  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam.bai
-		  done <  /scratch/pooja/Untreatedsamples.txt
-
+	                  bedtools intersect -a "$DIR"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam -b /groups/ameres/Pooja/Projects/zebrafishAnnotation/sequencingRun_december2017/analysis/annotation/stageSpecific/outputs/slamDunk_combinedStageSpecific_dr11_0.3.4/snpFiltering//finalBamFile_R1_position_lessthan10.bed  -v >  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam
+			                 samtools index  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam  "$OP"/combinedFile_"$p".fastq.gz_adapterTrimmed_slamdunk_mapped_filtered.bam.bai
+					          
+done <  /scratch/pooja/Untreatedsamples.txt 
